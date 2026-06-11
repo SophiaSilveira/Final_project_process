@@ -1,0 +1,89 @@
+Exemplo ADC:
+int main(void)
+  	/* USER CODE BEGIN 1 */
+  	int leitura = 0;
+  	float temperatura = 0;
+	/* USER CODE END 1 */
+  	while(1)
+	  	HAL_ADC_Start(&hadc1);
+	  	HAL_ADC_PollForConversion(&hadc1, 10);
+		leitura = HAL_ADC_GetValue(&hadc1);
+		HAL_ADC_Stop(&hadc1);
+	  	temperatura = 100.0*leitura/1242; //MaxMediçãoSensor*leitura*3.3V / 4096*MaxTençãoSensor
+  
+
+//==================================================================//
+Exemplo RTC:
+int main(void)
+	/* USER CODE BEGIN 1 */
+	RTC_TimeTypeDef relogio;
+  	RTC_DateTypeDef calendario;
+	uint8_t h,m,s, dia, mes, ano;
+	/* USER CODE END 1 */
+
+	/* USER CODE BEGIN 2 */
+	HAL_RTC_Init(&hrtc);
+  	HAL_RTC_WaitForSynchro(&hrtc);
+
+  	relogio.Hours = 20;
+  	relogio.Minutes = 45;
+  	relogio.Seconds = 45;
+
+ 	calendario.Date = 8;
+ 	calendario.Month = 6;
+  	calendario.Year = 26;
+
+  	HAL_RTC_SetTime(&hrtc, &relogio, RTC_FORMAT_BIN); //Set do horário
+  	HAL_RTC_SetDate(&hrtc, &calendario, RTC_FORMAT_BIN);//Set da data
+	/* USER CODE END 2 */
+
+  	while(1)
+		HAL_RTC_GetTime(&hrtc, &relogio, RTC_FORMAT_BIN); //Get do horário
+  		HAL_RTC_GetDate(&hrtc, &calendario, RTC_FORMAT_BIN); //Get da data
+  		h = relogio.Hours;
+  		m = relogio.Minutes;
+  		s = relogio.Seconds;
+  		dia = calendario.Date;
+  		mes = calendario.Month;
+  		ano = calendario.Year;
+
+//==================================================================//
+Exemplo lcd_progchar:
+const uint8_t cronometro[8] = {	0b000 01110,
+				0b000 00100,
+				0b000 01110,
+				0b000 10101,
+				0b000 10111,
+				0b000 10001,
+				0b000 01110,
+				0b00000000 };
+
+void lcd_progchar(void)
+	uint8_t n;
+	lcd_wrcom(0x40);
+	for(n = 0; n < 8; n++) lcd_wrchar(cronometro[n]);
+	lcd_wrcom(0x80);
+
+
+int main(void)
+	lcd_init(cursor_on);
+  	lcd_progchar();
+	goTo(0,0)
+	lcd_wrchar(0); //mostra o desenho 0
+
+//==================================================================//
+Exemplo put_password:
+while(1)
+	char aux = put_password(); //Não tranca a execução, por isso tem que testar o retorno
+	if(aux != 0) senha[i++] = aux;
+
+//==================================================================//
+Exemplo Cartão SD:
+int main(void)
+	/* USER CODE BEGIN 2 */
+  	i2c_init();
+	//Colocar alguma coisa que demore um pouco para acontecer (HAL_Delay() ou lcd_init())
+	i2c_wrmem(0xa0, 100, 1, ch);
+	HAL_Delay(20); //Precisa desse delay na escrita
+	char temp = i2c_rdmem(0xa0, 100, 1); //Leitura
+	
