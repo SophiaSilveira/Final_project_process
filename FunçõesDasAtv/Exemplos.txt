@@ -86,4 +86,14 @@ int main(void)
 	i2c_wrmem(0xa0, 100, 1, ch);
 	HAL_Delay(20); //Precisa desse delay na escrita
 	char temp = i2c_rdmem(0xa0, 100, 1); //Leitura
-	
+
+//==================================================================//
+Exemplo getKeyPad:
+while(1)
+	char keyPad = getKeyPad();
+	if(keyPad != 0){
+		goTo(0,0);
+		printf("K = %c\n", keyPad);
+	}
+	HAL_Delay(200); //Delay para não pegar varias vezes a tecla precionada
+					//Pode ser substituido por uma variavel que indica se o botão está ou não precionado
