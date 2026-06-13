@@ -75,4 +75,7 @@ void getTemp(void); //SHT15, i2c implementado pelo cube
 
 char put_password(void);
 int verify_password(char* senha);
+
+char getKeyPad(void);
+void checkLDR(void);
 /* USER CODE END PFP */
