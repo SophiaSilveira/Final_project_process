@@ -275,4 +275,104 @@ void checkLDR(void){ //A0 pro ADC, D8 pra ligar o LED
 	if(leitura >= 3500) GPIOD->BSRR = 1 << 8;
 	else GPIOD->BRR = 1<< 8;
 }
+
+void sht_init(void){
+    data_0;
+    sck_0;
+    data_1;
+    delayus(10);
+}
+
+void sht_pulse(void){
+    delayus(1);
+    sck_1;
+    delayus(2);
+    sck_0;
+    delayus(1);
+}
+
+void sht_start(void){
+    sck_1;
+    delayus(1);
+    data_0;
+    delayus(1);
+    sck_0;
+    delayus(1);
+    sck_1;
+    delayus(1);
+    data_1;
+    delayus(1);
+    sck_0;
+    delayus(1);
+}
+
+void sht_stop(void){
+    data_1;
+    sht_pulse();
+}
+
+void sht_wrCmd(uint8_t data){
+    uint8_t n;
+    for(n=0; n<8; n++){
+        if((data & (1<<(7-n))) == 0) data_0; else data_1;
+        sht_pulse();
+    }
+    data_1;
+    sht_pulse();
+}
+
+uint8_t sht_rdData(uint8_t confirm){
+    uint8_t n, val=0;
+    data_1;
+    for(n=0; n<8; n++){
+        val <<= 1;
+        delayus(1);
+        sck_1;
+        delayus(1);
+        if(data_in != 0) val++;
+        delayus(1);
+        sck_0;
+        delayus(1);
+    }
+    if(confirm == 0) data_0; else data_1;
+    sht_pulse();
+    data_1;
+    return val;
+}
+
+float sht_rdHumid(void){
+    uint16_t humid = 0;
+    uint8_t Hi_data, Lo_data;
+    float linear_humid;
+    sht_start();
+    sht_wrCmd(0x05);
+    while(data_in != 0) HAL_Delay(1);
+    Hi_data = sht_rdData(0);
+    Lo_data = sht_rdData(0xff);
+    humid = (Hi_data<<8)+Lo_data;
+    linear_humid = (4e-10)*humid*humid*humid - 0.000005*humid*humid + 0.0434*humid - 7.3845;
+    return linear_humid;
+}
+
+void getCarbono(void){
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 10);
+	leitura = HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Stop(&hadc1);
+	carbono = 0.06*leitura;
+}
+
+void buzzerTrava(void){ //Mudar o HAL_Delay(), pq desse jeito fica bloqueando a CPU
+	buzzer_1;
+	HAL_Delay(1000);
+	buzzer_0;
+}
+
+void buzzerAlarme(void){ //Mudar o HAL_Delay(), pq desse jeito fica bloqueando a CPU
+	buzzer_1;
+	HAL_Delay(100);
+	buzzer_0;
+	HAL_Delay(100);
+}
+
 /* USER CODE END 0 */
