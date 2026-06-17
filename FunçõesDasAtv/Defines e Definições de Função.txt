@@ -41,7 +41,18 @@
 
 #define i2c_ack 0
 #define i2c_nak 255
+//Porta i2c emulada (SHT15)
+
 //Porta i2c emulada (Cartão SD)
+#define data_0 GPIOB->BRR = 1 << 6
+#define data_1 GPIOB->BSRR = 1 << 6
+#define sck_0 GPIOB->BRR = 1 << 7
+#define sck_1 GPIOB->BSRR = 1 << 7
+#define data_in (GPIOB->IDR & (1 << 6))
+//Porta i2c emulada (SHT15)
+
+#define buzzer_0 GPIOC->BRR = 1 << 8
+#define buzzer_1 GPIOC->BSRR = 1 << 8
 /* USER CODE END PD */
 
 
@@ -67,6 +78,19 @@ uint8_t i2c_read(uint8_t ack_state);
 void i2c_wrmem(uint8_t slave_addr, uint16_t addr, uint8_t addr_size, uint8_t data);
 uint8_t i2c_rdmem(uint8_t slave_addr, uint16_t addr, uint8_t addr_size);
 //Porta i2c emulada (Cartão SD)
+
+//Porta i2c emulada (SHT15)
+void sht_init(void);
+void sht_pulse(void);
+void sht_start(void);
+void sht_stop(void);
+void sht_wrCmd(uint8_t data);
+uint8_t sht_rdData(uint8_t confirm);
+float sht_rdHumid(void);
+//Porta i2c emulada (SHT15)
+
+void buzzerTrava(void); 
+void buzzerAlarme(void);//1 tick do buzzer ligando e desligando 
 
 void abrePorta(void); //1 tick pra abrir a porta, colocar dentro de um for para abrir completamente (20->50 iterações)
 void fechaPorta(void);//1 tick pra abrir a porta, colocar dentro de um for para abrir completamente (20->50 iterações)
