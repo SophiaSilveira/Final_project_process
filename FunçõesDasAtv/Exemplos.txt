@@ -97,3 +97,13 @@ while(1)
 	}
 	HAL_Delay(200); //Delay para não pegar varias vezes a tecla precionada
 					//Pode ser substituido por uma variavel que indica se o botão está ou não precionado
+
+//==================================================================//
+Exemplo SHT15:
+int main(void)
+	/* USER CODE BEGIN 2 */
+	void sht_init(void)
+	/* USER CODE END 2 */
+	while(1)
+		goTo(0,0);
+		printf("H = %2.2f%%\n", sht_rdHumid());
