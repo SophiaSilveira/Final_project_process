@@ -102,4 +102,6 @@ int verify_password(char* senha);
 
 char getKeyPad(void);
 void checkLDR(void);
+
+void getMov(void);
 /* USER CODE END PFP */
