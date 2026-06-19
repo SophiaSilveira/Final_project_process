@@ -375,4 +375,8 @@ void buzzerAlarme(void){ //Mudar o HAL_Delay(), pq desse jeito fica bloqueando a
 	HAL_Delay(100);
 }
 
+void getMov(void){
+	if(movInp != 0) LEDMov_1; else LEDMov_0;
+}
+
 /* USER CODE END 0 */
