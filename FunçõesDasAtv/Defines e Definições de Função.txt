@@ -53,6 +53,11 @@
 
 #define buzzer_0 GPIOC->BRR = 1 << 8
 #define buzzer_1 GPIOC->BSRR = 1 << 8
+
+#define movInp (GPIOB->IDR & (1 << 12))
+#define LEDMov_0 GPIOB->BRR = (1 << 11)
+#define LEDMov_1 GPIOB->BSRR = (1 << 11)
+
 /* USER CODE END PD */
 
 
