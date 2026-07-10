@@ -133,6 +133,10 @@ uint8_t serial = 0;
 uint8_t ledQuarto = 0;
 int countSenha = 0;
 
+uint8_t portaAberta = 0, portaAbertaReed = 1;
+uint8_t janelaSalaAberta = 0, janelaSalaAbertaReed = 1;
+uint8_t janelaQuartoAberta = 0, janelaQuartoAbertaReed = 1;
+
 const uint8_t cadeadoAberto[8] = { 0b00001110,
 								   0b00000001,
 								   0b00000001,
@@ -499,6 +503,7 @@ void put_password(char *senha){
 		ch = getKeyPad();
 		if(ch != 0 && ch != '*' && ch != '#'){
 			goTo(countSenha, 1);
+			serial = 0;
 			senha[countSenha++] = ch;
 			printf("%c\n", ch);
 		}
@@ -511,34 +516,6 @@ int verify_password(char *senha){
 			return 0;
 	return 1;
 };
-
-void checkReedSwitch(void){
-	if(bloqueado == 1){
-		goTo(10,0);
-		if(RW_porta_casa && (HAL_GetTick() - TPorta >= 20)){
-			TPorta = HAL_GetTick();
-			SERVO_ON_PORTA;
-			HAL_Delay(1);
-			SERVO_OFF_PORTA;
-		}
-
-		goTo(11,0);
-		if(RW_janela_sala && (HAL_GetTick() - TJanelaSala >= 20)){
-			TJanelaSala = HAL_GetTick();
-			SERVO_ON_JANELA_SALA;
-			HAL_Delay(1);
-			SERVO_OFF_JANELA_SALA;
-		}
-
-		goTo(12,0);
-		if(RW_janela_quarto && (HAL_GetTick() - TJanelaQuarto >= 20)){
-			TJanelaQuarto = HAL_GetTick();
-			SERVO_ON_JANELA_QUARTO;
-			HAL_Delay(1);
-			SERVO_OFF_JANELA_QUARTO;
-		}
-	}
-}
 
 void getMov(void){
 	if(movInp != 0) LEDMov_1; else LEDMov_0;
@@ -563,8 +540,23 @@ void checkLDR(void){
 	HAL_ADC_PollForConversion(&hadc1, 10);
 	leitura = HAL_ADC_GetValue(&hadc1);
 	HAL_ADC_Stop(&hadc1);
-	if(leitura >= 1500) GPIOD->BRR = 1 << 8;
-	else GPIOD->BSRR = 1 << 8;
+	if(leitura >= 3800){
+		GPIOD->BRR = 1 << 8;
+		GPIOD->BRR = 1 << 9;
+	}
+	else {
+		GPIOD->BSRR = 1 << 8;
+		GPIOD->BSRR = 1 << 9;
+	}
+}
+
+int checkMQ7(void){
+	int leitura;
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, 10);
+	leitura = HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Stop(&hadc1);
+	return 500.0*leitura/4096;
 }
 
 void getUart(uint8_t *ans){
@@ -574,7 +566,10 @@ void getUart(uint8_t *ans){
 		*ans = 0;
 		printf("========================\r\n");
 		printf("(1) Ligar LED quarto\r\n");
-		printf("(2) ...\r\n");
+		printf("(2) Abre/Fecha Porta\r\n");
+		printf("(3) Abre/Fecha Janela da Sala\r\n");
+		printf("(4) Abre/Fecha Janela do Quarto\r\n");
+
 	} else {
 		HAL_UART_Receive(&huart2,(uint8_t*)&ch,1,10);
 		if(ch != 0){
@@ -590,7 +585,106 @@ void getUart(uint8_t *ans){
 			printf("%d\r\n", ledQuarto);
 			ledQuarto = !ledQuarto;
 			break;
+
+		case '2':
+			portaAberta = !portaAberta;
+			break;
+
+		case '3':
+			janelaSalaAberta = !janelaSalaAberta;
+			break;
+
+		case '4':
+			janelaQuartoAberta = !janelaQuartoAberta;
+			break;
+
 		default: break;
+	}
+}
+
+void servos(void){
+	if(portaAberta == 1 && portaAbertaReed == 0){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_PORTA;
+			HAL_Delay(1);
+			SERVO_OFF_PORTA;
+			HAL_Delay(19);
+		}
+		portaAbertaReed = 1;
+	}else if(portaAberta == 0 && portaAbertaReed == 1){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_PORTA;
+			HAL_Delay(2);
+			SERVO_OFF_PORTA;
+			HAL_Delay(18);
+		}
+		portaAbertaReed = 0;
+	}
+
+
+	if(janelaSalaAberta == 1 && janelaSalaAbertaReed == 0){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_SALA;
+			HAL_Delay(1);
+			SERVO_OFF_JANELA_SALA;
+			HAL_Delay(19);
+		}
+		janelaSalaAbertaReed = 1;
+
+	} else if(janelaSalaAberta == 0 && janelaSalaAbertaReed == 1){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_SALA;
+			HAL_Delay(2);
+			SERVO_OFF_JANELA_SALA;
+			HAL_Delay(18);
+		}
+		janelaSalaAbertaReed = 0;
+	}
+
+	if(janelaQuartoAberta == 1 && janelaQuartoAbertaReed == 0){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_QUARTO;
+			HAL_Delay(1);
+			SERVO_OFF_JANELA_QUARTO;
+			HAL_Delay(19);
+		}
+		janelaQuartoAbertaReed = 1;
+	} else if(janelaQuartoAberta == 0 && janelaQuartoAbertaReed == 1){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_QUARTO;
+			HAL_Delay(2);
+			SERVO_OFF_JANELA_QUARTO;
+			HAL_Delay(18);
+		}
+		janelaQuartoAbertaReed = 0;
+	}
+}
+
+void fechaTudo(void){
+	if(bloqueado == 1 && (portaAbertaReed == 1 || janelaSalaAbertaReed == 1 || janelaQuartoAbertaReed == 1)){
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_QUARTO;
+			HAL_Delay(2);
+			SERVO_OFF_JANELA_QUARTO;
+			HAL_Delay(18);
+		}
+		janelaQuartoAbertaReed = 0;
+
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_JANELA_SALA;
+			HAL_Delay(2);
+			SERVO_OFF_JANELA_SALA;
+			HAL_Delay(18);
+		}
+		janelaSalaAbertaReed = 0;
+
+		for(int i = 0; i < 20; i++){
+			SERVO_ON_PORTA;
+			HAL_Delay(2);
+			SERVO_OFF_PORTA;
+			HAL_Delay(18);
+			}
+		portaAbertaReed = 0;
 	}
 }
 
@@ -784,12 +878,131 @@ void oled_update_gas_area(void)
     cs_1;
 }
 
+void oled_update_humidity_area(void)
+{
+    oled_set_window(0, 32, 95, 63);
+
+    dc_1;
+    cs_0;
+
+    for(uint8_t y = 32; y <= 63; y++)
+    {
+        for(uint8_t x = 0; x <= 95; x++)
+        {
+            uint16_t color = oled_fb[y * OLED_W + x];
+
+            oled_write(color >> 8);
+            oled_write(color & 0xFF);
+        }
+    }
+
+    cs_1;
+}
+
+
+// -------------------- PIXEL 2X + FONT --------------------
+
+void oled_pixel2x(uint8_t x, uint8_t y, uint16_t color)
+{
+    oled_putpixel(x,     y,     color);
+    oled_putpixel(x + 1, y,     color);
+    oled_putpixel(x,     y + 1, color);
+    oled_putpixel(x + 1, y + 1, color);
+}
+
+static const uint8_t font5x7[12][5] =
+{
+    {0x3E,0x51,0x49,0x45,0x3E}, // 0
+    {0x00,0x42,0x7F,0x40,0x00}, // 1
+    {0x42,0x61,0x51,0x49,0x46}, // 2
+    {0x21,0x41,0x45,0x4B,0x31}, // 3
+    {0x18,0x14,0x12,0x7F,0x10}, // 4
+    {0x27,0x45,0x45,0x45,0x39}, // 5
+    {0x3C,0x4A,0x49,0x49,0x30}, // 6
+    {0x01,0x71,0x09,0x05,0x03}, // 7
+    {0x36,0x49,0x49,0x49,0x36}, // 8
+    {0x06,0x49,0x49,0x29,0x1E}, // 9
+    {0x00,0x00,0x60,0x60,0x00}, // .
+    {0x63,0x13,0x08,0x64,0x63}  // %
+};
+
+void oled_draw_char(uint8_t x, uint8_t y, char c, uint16_t color)
+{
+    uint8_t index;
+
+    if(c >= '0' && c <= '9')
+        index = c - '0';
+    else if(c == '.')
+        index = 10;
+    else if(c == '%')
+        index = 11;
+    else
+        return;
+
+    for(uint8_t col = 0; col < 5; col++)
+    {
+        uint8_t line = font5x7[index][col];
+
+        for(uint8_t row = 0; row < 7; row++)
+        {
+            if(line & (1 << row))
+            {
+                oled_pixel2x(x + col * 2, y + row * 2, color);
+            }
+        }
+    }
+}
+
 // -------------------- BACKGROUND --------------------
+static const uint8_t gas_icon[8][8] =
+{
+		{0,0,0,0,1,0,0,0},
+		{0,0,0,1,1,1,0,0},
+		{0,0,1,1,1,1,1,0},
+		{0,1,1,1,1,1,1,0},
+		{1,1,1,1,1,1,1,1},
+		{1,1,1,1,1,1,1,1},
+		{0,1,1,1,1,1,1,0},
+		{0,0,1,1,1,1,0,0}
+};
+
+static const uint8_t drop_icon[8][8] =
+{
+    {0,0,1,0,0,0,0,0},
+    {0,1,1,1,0,0,0,0},
+    {1,1,1,1,1,0,0,0},
+    {1,1,1,1,1,0,0,0},
+    {1,1,1,1,1,0,0,0},
+    {1,1,1,1,1,0,0,0},
+    {0,1,1,1,0,0,0,0},
+    {0,0,0,0,0,0,0,0}
+};
+
+
+void oled_draw_icon(uint8_t x, uint8_t y,
+                    const uint8_t icon[8][8],
+                    uint16_t color)
+{
+    for(uint8_t row = 0; row < 8; row++)
+    {
+        for(uint8_t col = 0; col < 8; col++)
+        {
+            if(icon[row][col])
+            {
+                oled_pixel2x(x + col * 2,
+                             y + row * 2,
+                             color);
+            }
+        }
+    }
+}
+
 
 void oled_draw_background(void)
 {
     oled_fill_rect(0, 0, 96, 64, 0x0000);
 
+    // Moldura
     for(uint8_t x = 0; x < 96; x++)
     {
         oled_putpixel(x, 0, 0xFFFF);
@@ -802,84 +1015,100 @@ void oled_draw_background(void)
         oled_putpixel(95, y, 0xFFFF);
     }
 
+    oled_draw_icon(10, 8, gas_icon, 0xF800);   // cinza
+    oled_draw_icon(6, 42, drop_icon, 0x07FF);  // azul claro
+
+    // Símbolos fixos da umidade
+    oled_draw_char(46, 42, '.', 0xFFFF);
+    oled_draw_char(82, 42, '%', 0xFFFF);
+
     oled_update();
-}
-
-// -------------------- PIXEL 2X + FONT --------------------
-
-void oled_pixel2x(uint8_t x, uint8_t y, uint16_t color)
-{
-    oled_putpixel(x,     y,     color);
-    oled_putpixel(x + 1, y,     color);
-    oled_putpixel(x,     y + 1, color);
-    oled_putpixel(x + 1, y + 1, color);
-}
-
-static const uint8_t font5x7[10][5] =
-{
-    {0x3E,0x51,0x49,0x45,0x3E},
-    {0x00,0x42,0x7F,0x40,0x00},
-    {0x42,0x61,0x51,0x49,0x46},
-    {0x21,0x41,0x45,0x4B,0x31},
-    {0x18,0x14,0x12,0x7F,0x10},
-    {0x27,0x45,0x45,0x45,0x39},
-    {0x3C,0x4A,0x49,0x49,0x30},
-    {0x01,0x71,0x09,0x05,0x03},
-    {0x36,0x49,0x49,0x49,0x36},
-    {0x06,0x49,0x49,0x29,0x1E}
-};
-
-void oled_draw_digit(uint8_t x, uint8_t y, uint8_t digit, uint16_t color)
-{
-    if(digit > 9) return;
-
-    for(uint8_t col = 0; col < 5; col++)
-    {
-        uint8_t line = font5x7[digit][col];
-
-        for(uint8_t row = 0; row < 7; row++)
-        {
-            if(line & (1 << row))
-            {
-                oled_pixel2x(x + col * 2, y + row * 2, color);
-            }
-        }
-    }
 }
 
 // -------------------- GAS VALUE --------------------
 
 void oled_draw_gas_value(float adc_gas)
 {
-    oled_fill_rect(10, 10, 50, 16, 0x0000);
+    oled_fill_rect(34, 10, 50, 16, 0x0000);
 
     uint16_t value = (uint16_t)adc_gas;
-    if(value > 9999) value = 9999;
 
-    uint8_t x = 10;
+    if(value > 9999)
+        value = 9999;
+
+    uint8_t x = 34;
     uint8_t y = 10;
 
     if(value >= 1000)
     {
-        oled_draw_digit(x, y, value / 1000, 0xFFFF);
+        oled_draw_char(x, y, '0' + value / 1000, 0xFFFF);
         x += 12;
     }
 
     if(value >= 100)
     {
-        oled_draw_digit(x, y, (value / 100) % 10, 0xFFFF);
+        oled_draw_char(x, y, '0' + (value / 100) % 10, 0xFFFF);
         x += 12;
     }
 
     if(value >= 10)
     {
-        oled_draw_digit(x, y, (value / 10) % 10, 0xFFFF);
+        oled_draw_char(x, y, '0' + (value / 10) % 10, 0xFFFF);
         x += 12;
     }
 
-    oled_draw_digit(x, y, value % 10, 0xFFFF);
+    oled_draw_char(x, y, '0' + (value % 10), 0xFFFF);
+
     oled_update_gas_area();
 }
+
+// -------------------- Humidity VALUE --------------------
+void oled_draw_humidity_value(float humidity)
+{
+    oled_fill_rect(18, 42, 24, 16, 0x0000); // parte inteira
+    oled_fill_rect(58, 42, 24, 16, 0x0000); // parte decimal
+
+    if(humidity < 0.0f)
+        humidity = 0.0f;
+
+    if(humidity > 100.0f)
+        humidity = 100.0f;
+
+    uint16_t inteiro = (uint16_t)humidity;
+    uint8_t decimos    = ((uint16_t)(humidity * 10))  % 10;
+    uint8_t centesimos = ((uint16_t)(humidity * 100)) % 10;
+
+    uint8_t x;
+    uint8_t y = 42;
+
+    // Aproxima da vírgula conforme o número de dígitos
+    if(inteiro >= 100)
+        x = 10;
+    else if(inteiro >= 10)
+        x = 22;
+    else
+        x = 34;
+
+    if(inteiro >= 100)
+    {
+        oled_draw_char(x, y, '0' + inteiro / 100, 0xFFFF);
+        x += 12;
+    }
+
+    if(inteiro >= 10)
+    {
+        oled_draw_char(x, y, '0' + (inteiro / 10) % 10, 0xFFFF);
+        x += 12;
+    }
+
+    oled_draw_char(x, y, '0' + (inteiro % 10), 0xFFFF);
+
+    oled_draw_char(58, 42, '0' + decimos, 0xFFFF);
+    oled_draw_char(70, 42, '0' + centesimos, 0xFFFF);
+
+    oled_update_humidity_area();
+}
+
 
 /* USER CODE END 0 */
 
@@ -944,7 +1173,7 @@ int main(void)
 
 
   HAL_Delay(500);
-  
+
 
   /* USER CODE END 2 */
 
@@ -974,6 +1203,7 @@ int main(void)
 				  printf("Bem-Vindo!\n");
 				  goTo(15,0);
 				  lcd_wrchar(1);
+				  fechaTudo();
 			  }
 			  break;
 
@@ -986,8 +1216,8 @@ int main(void)
 			  		bloqueado = 1;
 			  		goTo(15,0);
 			  		lcd_wrchar(1);
+			  		fechaTudo();
 			  } else if(bloqueado) put_password(senha);
-
 			  if(countSenha >= 4 && bloqueado){
 				  serial = 0;
 				  countSenha = 0;
@@ -1013,19 +1243,21 @@ int main(void)
 			  printf("%02d:%02d:%02d\n", h, m, s);
 
 			  if(flagAlarme) buzzerAlarme();
-			  checkReedSwitch();
-			  getMov();
 
-			  if(HAL_GetTick() - TSensor >= 500){
-				  TSensor = HAL_GetTick();
-				  checkLDR();
-				  serial = 0;
-				  goTo(0,1);
-				  printf("%2.2f%%\n", sht_rdHumid());
+			  if(bloqueado == 0){
+				  getUart(&ans);
+				  if(HAL_GetTick() - TSensor >= 1000){
+				  		TSensor = HAL_GetTick();
+				  		checkLDR();
+				  		serial = 1;
+				  	  	//printf("%3.0f ppm\r\n", checkMQ7());
+				  		oled_draw_humidity_value(sht_rdHumid());
+				  		servos();
+				  		getMov();
+				  }
+				  servos();
+				  getMov();
 			  }
-
-			  getUart(&ans);
-
 			  break;
 		  default:
 			  break;
@@ -1252,8 +1484,8 @@ static void MX_GPIO_Init(void)
                           |GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_8|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2
-                          |GPIO_PIN_3, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_0|GPIO_PIN_1
+                          |GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PC11 PC12 PC4 PC5
                            PC7 PC8 PC9 */
@@ -1296,8 +1528,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PD8 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  /*Configure GPIO pins : PD8 PD9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
